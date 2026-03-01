@@ -77,24 +77,24 @@ class PatientGraphClient:
         return patient_graph
         
     async def log_patient_event(self, event_type: str, message: str):
-        """Logs patient events with timestamps to the PostgreSQL database."""
+        """Logs patient events with forced timestamps to ensure they appear in history."""
         async with AsyncSessionLocal() as session:
             try:
-                # Added 'now()' to ensure records are ordered correctly for the next fetch
+                # We use CURRENT_TIMESTAMP to ensure the DB sees the time immediately
                 if event_type == "meal":
-                    query = text("INSERT INTO meals_log (patient_id, meal_description, created_at) VALUES (:p_id, :msg, now())")
+                    query = text("INSERT INTO meals_log (patient_id, meal_description, created_at) VALUES (:p_id, :msg, CURRENT_TIMESTAMP)")
                 elif event_type == "side_effect":
-                    query = text("INSERT INTO side_effect_logs (patient_id, symptom, created_at) VALUES (:p_id, :msg, now())")
+                    query = text("INSERT INTO side_effect_logs (patient_id, symptom, created_at) VALUES (:p_id, :msg, CURRENT_TIMESTAMP)")
                 elif event_type == "vitals":
-                    query = text("INSERT INTO vitals (patient_id, metrics, created_at) VALUES (:p_id, :msg, now())")
+                    query = text("INSERT INTO vitals (patient_id, metrics, created_at) VALUES (:p_id, :msg, CURRENT_TIMESTAMP)")
                 else:
-                    print(f"Unknown event type: {event_type}")
                     return False
                     
-                await session.execute(query, {"p_id": self.patient_id, "msg": message})
+                await session.execute(query, {"p_id": self.patient_id.lower(), "msg": message})
                 await session.commit()
+                print(f"✅ DB SUCCESS: Logged {event_type}") # This will show in your server logs
                 return True
             except Exception as e:
-                print(f"Error logging {event_type} event: {e}")
+                print(f"❌ DB ERROR: {e}")
                 await session.rollback()
                 return False
