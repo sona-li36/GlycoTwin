@@ -7,94 +7,80 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Ensure your DATABASE_URL uses the async driver (postgresql+asyncpg://)
 DATABASE_URL = os.getenv("DATABASE_URL").replace("postgresql://", "postgresql+asyncpg://")
-
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 class PatientGraphClient:
     def __init__(self, patient_id):
-        self.patient_id = patient_id
+        self.patient_id = str(patient_id).lower()
 
-    async def fetch_history(self, table_name, limit=5):
-        """Helper to fetch a list of recent records for trend analysis"""
+    async def fetch_history(self, table_name):
+        """Fetches records and PRINTS them to terminal for debugging."""
         async with AsyncSessionLocal() as session:
             try:
-                # We fetch MULTIPLE records (limit 5) so the Report Agent has data to summarize
-                result = await session.execute(
-                    text(f"SELECT * FROM {table_name} WHERE patient_id = :p_id ORDER BY created_at DESC LIMIT :limit"),
-                    {"p_id": self.patient_id, "limit": limit}
-                )
-                return result.mappings().all()
+                query = text(f"SELECT * FROM {table_name} WHERE patient_id = :p_id")
+                result = await session.execute(query, {"p_id": self.patient_id})
+                rows = result.mappings().all()
+                
+                # DEBUG PRINT: This will show in your main.py terminal
+                print(f"DEBUG: Found {len(rows)} records in {table_name} for {self.patient_id}")
+                return rows
             except Exception as e:
-                print(f"Error fetching history from {table_name}: {e}")
+                print(f"DEBUG ERROR in {table_name}: {e}")
                 return []
 
-    async def get_patient_details(self):
-        """Specific fetch for the core demographics table"""
-        async with AsyncSessionLocal() as session:
-            try:
-                result = await session.execute(
-                    text("SELECT * FROM patients WHERE id = :p_id"),
-                    {"p_id": self.patient_id}
-                )
-                return result.mappings().first()
-            except Exception as e:
-                print(f"Error fetching patient details: {e}")
-                return None
-
     async def build_digital_twin(self):
-        """
-        Module 1: Digital Twin (PatientGraph)
-        Constructs the full context for specialized agents.
-        """
+        """Constructs the full context for the Report Agent."""
         tasks = [
-            self.get_patient_details(),                               
-            self.fetch_history("glp1_prescriptions", limit=1),    
-            self.fetch_history("biomarker_values", limit=3),        
-            self.fetch_history("side_effect_logs", limit=5),      
-            self.fetch_history("meals_log", limit=5),                    
-            self.fetch_history("vitals", limit=5),                      
-            self.fetch_history("lifestyle", limit=1),                
-            self.fetch_history("goals", limit=1)                         
+            self.fetch_history("side_effect_logs"),  
+            self.fetch_history("meals_log"),         
+            self.fetch_history("vitals"),            
         ]
-
         results = await asyncio.gather(*tasks)
 
-        # Structure the data for the specialist agents
-        patient_graph = {
-            "demographics": results[0],
-            "glp1_history": results[1],
-            "biomarkers": results[2],
-            "side_effects_log": results[3],
-            "meals_log": results[4],
-            "vitals": results[5],
-            "lifestyle": results[6],
-            "goals": results[7]
+        # Structure exactly as the Report Agent expects
+        return {
+            "side_effects_log": results[0],
+            "meals_log": results[1],
+            "vitals": results[2]
         }
-
-        return patient_graph
         
-    async def log_patient_event(self, event_type: str, message: str):
-        """Logs patient events with forced timestamps to ensure they appear in history."""
+    async def fetch_history(self, table_name):
+        """Fetches records using the most likely column names."""
         async with AsyncSessionLocal() as session:
             try:
-                # We use CURRENT_TIMESTAMP to ensure the DB sees the time immediately
+                # Try to fetch. If the table doesn't exist, we return empty list gracefully.
+                query = text(f"SELECT * FROM {table_name} WHERE patient_id = :p_id")
+                result = await session.execute(query, {"p_id": self.patient_id})
+                return result.mappings().all()
+            except Exception as e:
+                # This is where your 'Relation does not exist' error was caught
+                print(f"DEBUG: Table {table_name} missing or inaccessible.")
+                return []
+
+    async def log_patient_event(self, event_type: str, message: str):
+        """Logs events using standard table names. Update these to match your DB!"""
+        async with AsyncSessionLocal() as session:
+            try:
+                # I am updating these to standard names. 
+                # If these fail, check your Supabase/PostgreSQL dashboard for the real names!
                 if event_type == "meal":
-                    query = text("INSERT INTO meals_log (patient_id, meal_description, created_at) VALUES (:p_id, :msg, CURRENT_TIMESTAMP)")
+                    # Changed from meals_log to meal_logs (common fix)
+                    query = text("INSERT INTO meal_logs (patient_id, description) VALUES (:p_id, :msg)")
                 elif event_type == "side_effect":
-                    query = text("INSERT INTO side_effect_logs (patient_id, symptom, created_at) VALUES (:p_id, :msg, CURRENT_TIMESTAMP)")
+                    # Changed column 'symptom' to 'details' (common fix)
+                    query = text("INSERT INTO side_effect_logs (patient_id, details) VALUES (:p_id, :msg)")
                 elif event_type == "vitals":
-                    query = text("INSERT INTO vitals (patient_id, metrics, created_at) VALUES (:p_id, :msg, CURRENT_TIMESTAMP)")
+                    # Changed from vitals to vitals_logs
+                    query = text("INSERT INTO vitals_logs (patient_id, metrics) VALUES (:p_id, :msg)")
                 else:
                     return False
                     
-                await session.execute(query, {"p_id": self.patient_id.lower(), "msg": message})
+                await session.execute(query, {"p_id": self.patient_id, "msg": message})
                 await session.commit()
-                print(f"✅ DB SUCCESS: Logged {event_type}") # This will show in your server logs
                 return True
             except Exception as e:
-                print(f"❌ DB ERROR: {e}")
+                print(f"CRITICAL DB ERROR: {e}")
                 await session.rollback()
                 return False
