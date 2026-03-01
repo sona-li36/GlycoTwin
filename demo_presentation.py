@@ -4,8 +4,18 @@ import time
 
 # Configuration
 BASE_URL = "http://localhost:8000/chat"
-# Use the UUID that worked for your database
 PATIENT_ID = "a1111111-1111-1111-1111-111111111111" 
+
+def print_clean(text):
+    """
+    Ensures the response looks professional by handling line breaks 
+    and removing messy literal characters.
+    """
+    if not text:
+        return
+    # Replace literal \n strings with actual newlines for a clean look
+    clean_text = text.replace('\\n', '\n')
+    print(clean_text)
 
 def run_step(step_name, message, is_report=False):
     print(f"\n--- STEP: {step_name} ---")
@@ -24,8 +34,11 @@ def run_step(step_name, message, is_report=False):
             data = response.json()
             print(f"Handled by: {data['handled_by']}")
             print("\nGlycoTwin Response:")
-            # Use splitlines to ensure clean printing of paragraphs
-            print(data['glycotwin_response'])
+            
+            # --- UPDATED CLEAN PRINTING LOGIC ---
+            print_clean(data['glycotwin_response'])
+            # ------------------------------------
+            
         else:
             print(f"❌ Error {response.status_code}: {response.text}")
             
@@ -47,13 +60,15 @@ def main():
     
     # 3. Vitals Check
     run_step("Vitals Check", "My blood pressure is 142/92.")
-    time.sleep(2) # Give the DB a moment to settle
+    
+    # Allow Digital Twin to sync records (Critical for Memory)
+    print("\n⏳ Allowing Digital Twin to sync records...")
+    time.sleep(4) 
     
     # 4. The Final Clinical Summary
     print("\n" + "="*60)
     print("📋 GENERATING FINAL DOCTOR'S SUMMARY REPORT")
     print("="*60)
-    # Pass 'is_report=True' to show the loading message
     run_step("Final Report", "Please summarize my history for my doctor's visit.", is_report=True)
     
     print("\n" + "="*60)

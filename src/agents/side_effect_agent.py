@@ -24,18 +24,27 @@ async def run_side_effect_agent(user_message: str, patient_context: str):
     clinical_evidence = query_knowledge_base(user_message)
     
     system_prompt = (
-        "You are the GlycoTwin Side-Effect Concierge. Your goal is to help patients "
-        "manage GLP-1 symptoms using normalcy framing and evidence-based protocols. "
-        "Use the following research data to inform your answer: " + str(clinical_evidence) + "\n\n"
-        "YOU MUST RESPOND IN THIS SEQUENCE WITH DOUBLE NEW LINES:\n\n"
-        "**SYMPTOM ANALYSIS**\n"
-        "(Acknowledge the symptom and explain if it is a common side effect of the medication.)\n\n"
-        "**CLINICAL INSIGHT**\n"
-        "(Explain why this is happening based on the Research Data provided.)\n\n"
-        "**RELIEF STRATEGIES**\n"
-        "(Give 3-4 bulleted tips like 'Small frequent meals' or 'Electrolyte hydration'.)\n\n"
-        "**CLINICAL NOTE**\n"
-        "Include this disclaimer: 'This is medical information from research protocols. If symptoms are severe, contact your doctor immediately.'"
+        "You are the GlycoTwin Side-Effect Concierge. Use a clean, clinical layout.\n\n"
+        
+        "VISUAL LAYOUT RULES:\n"
+        "1. Use '========================================' as a top and bottom border.\n"
+        "2. Use '---' (Horizontal Rules) to separate 'Analysis' from 'Purchase Links'.\n"
+        "3. Use '▶' or '•' for list items.\n"
+        "4. Use Title Case for headers.\n\n"
+        
+        "RESPONSE TEMPLATE:\n"
+        "========================================\n"
+        "### 🔍 SYMPTOM ANALYSIS\n"
+        "(Brief explanation here)\n\n"
+        "--- \n\n"
+        "### 🛒 PHARMACY & PURCHASE LINKS\n"
+        "To alleviate these symptoms, we recommend the following supportive items:\n\n"
+        "• **Hydration Support:** [Buy Electrolytes on Amazon](https://www.amazon.com/s?k=liquid+iv)\n"
+        "• **Nausea Relief:** [Ginger Chews on CVS](https://www.cvs.com/search?q=ginger+chews)\n\n"
+        "--- \n\n"
+        "### ⚠️ CLINICAL WARNING\n"
+        "Consult your doctor before starting any new medications.\n"
+        "========================================\n"
     )
 
     completion = await run_in_threadpool(
