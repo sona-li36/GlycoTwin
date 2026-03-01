@@ -23,6 +23,7 @@ from src.knowledge_engine import query_knowledge_base
 from src.agents.side_effect_agent import run_side_effect_agent
 from src.agents.meal_agent import run_meal_agent
 from src.agents.vitals_agent import run_vitals_agent
+from src.agents.report_agent import run_report_agent
 
 load_dotenv()
 
@@ -33,7 +34,7 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 async def chat_with_glycotwin(patient_id: str, message: str):
     """
     GlycoTwin Orchestrator:
-    Routes users to the Meal Specialist, Side-Effect Specialist, or Vitals Analyst.
+    Routes users to the Meal Specialist, Side-Effect Specialist, Vitals Analyst, or Report Generator.
     """
     
     # 1. HARD SAFETY CHECK (Self-harm/Emergency)
@@ -49,10 +50,10 @@ async def chat_with_glycotwin(patient_id: str, message: str):
         urgency = intent_data.get("urgency", "low")
 
         # --- KEYWORD OVERRIDE (Safety Net) ---
-        # Ensures specific words ALWAYS trigger the right specialist
         food_keywords = ["salad", "lunch", "protein", "ate", "dinner", "breakfast", "meal"]
         symptom_keywords = ["nausea", "sick", "stomach", "dizzy", "vomit", "constipat", "pain"]
         vitals_keywords = ["weight", "lb", "kg", "pressure", "bp", "heart rate", "pulse", "bpm"]
+        report_keywords = ["report", "summary", "doctor", "note", "history", "review"]
 
         if any(word in message.lower() for word in food_keywords):
             intent_name = "meal_analysis"
@@ -60,6 +61,8 @@ async def chat_with_glycotwin(patient_id: str, message: str):
             intent_name = "side_effect_report"
         elif any(word in message.lower() for word in vitals_keywords):
             intent_name = "vitals_log"
+        elif any(word in message.lower() for word in report_keywords):
+            intent_name = "clinical_report"
 
         # 3. BUILD DIGITAL TWIN CONTEXT
         graph_client = PatientGraphClient(patient_id)
@@ -70,20 +73,22 @@ async def chat_with_glycotwin(patient_id: str, message: str):
         if intent_name == "meal_analysis":
             final_response = await run_meal_agent(message, context_summary)
             agent_used = "Meal Intelligence Agent"
-            # LOG TO DIGITAL TWIN
             await graph_client.log_patient_event("meal", message)
             
         elif intent_name == "side_effect_report" or intent_name == "dose_question":
             final_response = await run_side_effect_agent(message, context_summary)
             agent_used = "Side-Effect Concierge"
-            # LOG TO DIGITAL TWIN
             await graph_client.log_patient_event("side_effect", message)
 
         elif intent_name == "vitals_log":
             final_response = await run_vitals_agent(message, context_summary)
             agent_used = "Vitals Analyst"
-            # LOG TO DIGITAL TWIN
             await graph_client.log_patient_event("vitals", message)
+
+        elif intent_name == "clinical_report":
+            # This agent synthesizes the entire history into a SOAP note
+            final_response = await run_report_agent(context_summary)
+            agent_used = "Clinical Report Agent"
             
         else:
             # FALLBACK: Primary Brain
@@ -106,7 +111,7 @@ async def chat_with_glycotwin(patient_id: str, message: str):
             "handled_by": agent_used,
             "urgency_level": urgency,
             "glycotwin_response": safe_response,
-            "digital_twin_updated": True
+            "digital_twin_updated": True if intent_name != "clinical_report" else False
         }
 
     except Exception as e:
@@ -115,5 +120,3 @@ async def chat_with_glycotwin(patient_id: str, message: str):
 
 if __name__ == "__main__":
     uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)
-
-    # update test
