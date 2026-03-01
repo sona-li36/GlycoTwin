@@ -1,0 +1,17 @@
+credentials:
+  usernames:
+    patient_jsmith:
+      email: jsmith@email.com
+      name: John Smith
+      password: 'password123' # You can add more patients here
+    patient_skiran:
+      email: skiran@email.com
+      name: Sonali Kiran
+      password: 'mypassword'
+cookie:
+  expiry_days: 30
+  key: some_signature_key
+  name: some_cookie_name
+preauthorized:
+  emails:
+    - mjsmith@email.com
