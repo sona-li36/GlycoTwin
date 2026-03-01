@@ -17,49 +17,52 @@ class PatientGraphClient:
     def __init__(self, patient_id):
         self.patient_id = patient_id
 
-    async def fetch_data(self, query_name, table_name):
-        """Helper to run a specific query for the Digital Twin"""
+    async def fetch_history(self, table_name, limit=5):
+        """Helper to fetch a list of recent records for trend analysis"""
         async with AsyncSessionLocal() as session:
             try:
-                # Matches your UUID schema
+                # We fetch MULTIPLE records (limit 5) so the Report Agent has data to summarize
                 result = await session.execute(
-                    text(f"SELECT * FROM {table_name} WHERE patient_id = :p_id ORDER BY created_at DESC LIMIT 1"),
-                    {"p_id": self.patient_id}
+                    text(f"SELECT * FROM {table_name} WHERE patient_id = :p_id ORDER BY created_at DESC LIMIT :limit"),
+                    {"p_id": self.patient_id, "limit": limit}
                 )
-                return result.mappings().first()
+                return result.mappings().all()
             except Exception as e:
-                print(f"Error fetching {query_name}: {e}")
-                return None
+                print(f"Error fetching history from {table_name}: {e}")
+                return []
 
     async def get_patient_details(self):
         """Specific fetch for the core demographics table"""
         async with AsyncSessionLocal() as session:
-            result = await session.execute(
-                text("SELECT * FROM patients WHERE id = :p_id"),
-                {"p_id": self.patient_id}
-            )
-            return result.mappings().first()
+            try:
+                result = await session.execute(
+                    text("SELECT * FROM patients WHERE id = :p_id"),
+                    {"p_id": self.patient_id}
+                )
+                return result.mappings().first()
+            except Exception as e:
+                print(f"Error fetching patient details: {e}")
+                return None
 
     async def build_digital_twin(self):
         """
         Module 1: Digital Twin (PatientGraph)
-        Performs 8 parallel DB queries at chat start .
+        Constructs the full context for specialized agents.
         """
-        # Execute all 8 queries in parallel to minimize latency 
         tasks = [
-            self.get_patient_details(),                               # 1. Demographics
-            self.fetch_data("glp1_history", "glp1_prescriptions"),    # 2. GLP-1 History
-            self.fetch_data("biomarkers", "biomarker_values"),        # 3. Biomarkers
-            self.fetch_data("side_effects", "side_effect_logs"),      # 4. Side Effects
-            self.fetch_data("meals", "meals_log"),                    # 5. Meals
-            self.fetch_data("vitals", "vitals"),                      # 6. Vitals
-            self.fetch_data("lifestyle", "lifestyle"),                # 7. Lifestyle
-            self.fetch_data("goals", "goals")                         # 8. Goals
+            self.get_patient_details(),                               
+            self.fetch_history("glp1_prescriptions", limit=1),    
+            self.fetch_history("biomarker_values", limit=3),        
+            self.fetch_history("side_effect_logs", limit=5),      
+            self.fetch_history("meals_log", limit=5),                    
+            self.fetch_history("vitals", limit=5),                      
+            self.fetch_history("lifestyle", limit=1),                
+            self.fetch_history("goals", limit=1)                         
         ]
 
         results = await asyncio.gather(*tasks)
 
-        # Structure the data for the specialist agents [cite: 19-20]
+        # Structure the data for the specialist agents
         patient_graph = {
             "demographics": results[0],
             "glp1_history": results[1],
@@ -74,15 +77,16 @@ class PatientGraphClient:
         return patient_graph
         
     async def log_patient_event(self, event_type: str, message: str):
-        """Logs patient events (e.g. meals, side effects, vitals) to the database."""
+        """Logs patient events with timestamps to the PostgreSQL database."""
         async with AsyncSessionLocal() as session:
             try:
+                # Added 'now()' to ensure records are ordered correctly for the next fetch
                 if event_type == "meal":
-                    query = text("INSERT INTO meals_log (patient_id, meal_description) VALUES (:p_id, :msg)")
+                    query = text("INSERT INTO meals_log (patient_id, meal_description, created_at) VALUES (:p_id, :msg, now())")
                 elif event_type == "side_effect":
-                    query = text("INSERT INTO side_effect_logs (patient_id, symptom) VALUES (:p_id, :msg)")
+                    query = text("INSERT INTO side_effect_logs (patient_id, symptom, created_at) VALUES (:p_id, :msg, now())")
                 elif event_type == "vitals":
-                    query = text("INSERT INTO vitals (patient_id, metrics) VALUES (:p_id, :msg)")
+                    query = text("INSERT INTO vitals (patient_id, metrics, created_at) VALUES (:p_id, :msg, now())")
                 else:
                     print(f"Unknown event type: {event_type}")
                     return False
