@@ -34,3 +34,5 @@ async def run_vitals_agent(user_message: str, patient_context: str):
         )
     )
     return completion.choices[0].message.content
+    # update test
+    
