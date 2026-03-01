@@ -1,18 +1,20 @@
+cookie:
+  expiry_days: 30
+  key: some_signature_key
+  name: some_cookie_name
 credentials:
   usernames:
-    patient_jsmith:
-      email: jsmith@email.com
-      name: John Smith
-      password: 'password123' # You can add more patients here
     patient_skiran:
       email: skiran@email.com
       name: Sonali Kiran
-      password: 'mypassword'
-cookie:
-  expiry_days: 30
-  key: random_signature_key_123
-  name: glycotwin_cookie
-credentials:
-  usernames: {}
+      password: $2b$12$zsx1g3z0bJZO6ePnfu4BXeA8pP/bUPK9T3jpEZouxAlqBV8n2x4mG
+    sona_123:
+      email: sonalikiran0630@gmail.com
+      first_name: Sonali
+      last_name: Kiran
+      logged_in: false
+      password: $2b$12$Ko.fva271jfHf6FwUdVl2O7ZMwkegHvjSNy7cSNuc1d53CCbnBUKW
+      password_hint: name
+      roles: null
 preauthorized:
   emails: []

@@ -13,8 +13,7 @@ authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
     config['cookie']['key'],
-    config['cookie']['expiry_days'],
-    config['preauthorized']
+    config['cookie']['expiry_days']
 )
 
 # 3. Create Tabs for Login and Register
@@ -22,22 +21,26 @@ tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
 
 with tab2:
     try:
-        if authenticator.register_user('Register User', preauthorization=False):
+        # Call it with NO arguments at all. The library will use defaults.
+        if authenticator.register_user():
             st.success('User registered successfully! You can now login.')
-            # Save the new user to the YAML file immediately
+            # Save the new user to the YAML file
             with open('config.yaml', 'w') as file:
                 yaml.dump(config, file, default_flow_style=False)
     except Exception as e:
-        st.error(e)
+        st.error(f"Registratio~n Error: {e}")
 
 with tab1:
-    name, authentication_status, username = authenticator.login('Login', 'main')
-
-    if authentication_status:
+    authenticator.login(location='main')
+    
+    if st.session_state.get("authentication_status"):
         authenticator.logout('Logout', 'sidebar')
-        st.title(f"🧬 Welcome, {name}")
+        name = st.session_state["name"]
+        username = st.session_state["username"]
+        st.write(f'Welcome *{name}*')
+        st.title("🧬 GlycoTwin Live Patient Portal")
         
-        # Patient ID is now tied to the logged-in username
+        # Use the logged-in username as the Patient ID
         PATIENT_ID = username 
         API_URL = "http://localhost:8000/chat"
 
@@ -48,7 +51,7 @@ with tab1:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-        if prompt := st.chat_input("How are you feeling today?"):
+        if prompt := st.chat_input("Log your meal or symptom..."):
             st.chat_message("user").markdown(prompt)
             st.session_state.messages.append({"role": "user", "content": prompt})
 
@@ -60,7 +63,7 @@ with tab1:
                     st.markdown(full_response)
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-    elif authentication_status == False:
+    elif st.session_state.get("authentication_status") is False:
         st.error('Username/password is incorrect')
-    elif authentication_status == None:
-        st.warning('Please enter your username and password')s
+    elif st.session_state.get("authentication_status") is None:
+        st.warning('Please enter your username and password')
