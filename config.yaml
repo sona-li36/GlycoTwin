@@ -10,8 +10,9 @@ credentials:
       password: 'mypassword'
 cookie:
   expiry_days: 30
-  key: some_signature_key
-  name: some_cookie_name
+  key: random_signature_key_123
+  name: glycotwin_cookie
+credentials:
+  usernames: {}
 preauthorized:
-  emails:
-    - mjsmith@email.com
+  emails: []
