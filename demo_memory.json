@@ -1,0 +1,58 @@
+{
+    "sona_123": {
+        "meals_log": [],
+        "side_effects_log": [
+            {
+                "symptom": "'m feeling really dizzy and lightheaded today."
+            },
+            {
+                "symptom": "hey i want to know that today i have felling sick "
+            }
+        ],
+        "vitals": []
+    },
+    "deepika": {
+        "meals_log": [
+            {
+                "meal_description": "ya today i only have small bowl of watermelon and a cup of coffe"
+            },
+            {
+                "meal_description": "My blood pressure today is 110 over 70 and my heart rate is 75."
+            },
+            {
+                "meal_description": "ya taoday in lunch i have taken a  bowl watermeleon and a a cup of cofffe"
+            },
+            {
+                "meal_description": "my blood pressure toady is 110 over 70  and my heart rate is 75"
+            },
+            {
+                "meal_description": "\"I've been feeling extremely dizzy and lightheaded for the past two days. It usually happens in the late afternoon. Why is this happening?\""
+            },
+            {
+                "meal_description": "\"I had a very small salad for lunch, but I'm feeling incredibly nauseous. I thought eating light was better for my GLP-1 treatment?\""
+            },
+            {
+                "meal_description": "i've been felling extremely dizzy and lightheaded for the past two days .it usually happend in the late afternoon .why is this happening"
+            }
+        ],
+        "side_effects_log": [
+            {
+                "symptom": "\"I\u2019m feeling very dizzy and my head is spinning right now"
+            },
+            {
+                "symptom": "today i am fellling very dizzy and my head is also spinning"
+            },
+            {
+                "symptom": "today i am felling sick"
+            },
+            {
+                "symptom": "i have been having cough and cold for 3 months and have observed a deterioration in my weight and dont feel like eating accompanied with pain in chest"
+            }
+        ],
+        "vitals": [
+            {
+                "metrics": "My weight hasn't changed in three weeks even though I'm on 1.0mg now. Is the medication not working for me anymore?\""
+            }
+        ]
+    }
+}

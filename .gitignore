@@ -56,3 +56,5 @@ venv.bak/
 
 # Project Specific
 Data of GLP/
+.env.save
+.env
